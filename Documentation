@@ -1,1 +1,145 @@
-bdfnrymgsg
+Resilient Email Service
+Overview
+Resilient Email Service is a TypeScript-based service for sending emails through multiple providers. It features a retry mechanism that switches to an alternate provider if the primary provider fails. It also includes a logging mechanism to keep track of email sending attempts and failures.
+Features
+•	Retry Mechanism: Automatically switches to the next provider if the current one fails.
+•	Logging: Records all email attempts and results in a log file.
+•	Error Handling: Provides feedback on errors encountered during email sending.
+.
+Steps
+1.	Install Dependencies
+Run the following command to install the necessary dependencies.
+bash
+Copy code
+npm install
+ 
+Configuration
+Email Providers
+Implement your email providers by creating classes that conform to the EmailProvider interface.
+typescript
+Copy code
+export interface EmailProvider {
+  sendEmail(email: Email): Promise<void>;
+}
+Logging
+The default log file is log.txt, but you can customize it by passing a different file name to the EmailService constructor.
+typescript
+Copy code
+export class EmailService {
+  private logFile: string;
+
+  constructor(providers: EmailProvider[], logFile: string = 'log.txt') {
+    this.providers = providers;
+    this.logFile = logFile;
+  }
+}
+Usage
+Create Email Providers
+Define your email providers according to the EmailProvider interface.
+typescript
+Copy code
+class MockEmailProvider1 implements EmailProvider {
+  async sendEmail(email: Email): Promise<void> {
+    throw new Error('Provider 1 failed');
+  }
+}
+
+class MockEmailProvider2 implements EmailProvider {
+  async sendEmail(email: Email): Promise<void> {
+    // Simulate successful email sending
+  }
+}
+Send an Email
+Create an instance of EmailService and use it to send emails.
+typescript
+Copy code
+const emailService = new EmailService([new MockEmailProvider1(), new MockEmailProvider2()]);
+
+emailService.sendEmail({
+  to: 'test@example.com',
+  subject: 'Test Email',
+  body: 'This is a test email.',
+}).catch(error => console.error(error));
+Testing
+Run Tests
+Ensure that you have Jest installed and run the tests with:
+bash
+Copy code
+npx jest
+Example Tests
+Here’s a sample test suite for the EmailService.
+typescript
+Copy code
+import { EmailService, Email, EmailProvider } from './EmailService';
+import { jest } from '@jest/globals';
+
+class MockEmailProvider1 implements EmailProvider {
+  async sendEmail(email: Email): Promise<void> {
+    throw new Error('Provider 1 failed');
+  }
+}
+
+class MockEmailProvider2 implements EmailProvider {
+  async sendEmail(email: Email): Promise<void> {
+    // Simulate successful email sending
+  }
+}
+
+describe('EmailService', () => {
+  let emailService: EmailService;
+  let mockProvider1: MockEmailProvider1;
+  let mockProvider2: MockEmailProvider2;
+
+  beforeEach(() => {
+    mockProvider1 = new MockEmailProvider1();
+    mockProvider2 = new MockEmailProvider2();
+    emailService = new EmailService([mockProvider1, mockProvider2]);
+  });
+
+  it('should send email successfully using the second provider', async () => {
+    await expect(emailService.sendEmail({
+      to: 'test@example.com',
+      subject: 'Test',
+      body: 'This is a test email.',
+    })).resolves.not.toThrow();
+  });
+
+  it('should retry and switch providers on failure', async () => {
+    jest.spyOn(mockProvider1, 'sendEmail').mockRejectedValue(new Error('Provider 1 failed'));
+    jest.spyOn(mockProvider2, 'sendEmail').mockResolvedValue();
+
+    await expect(emailService.sendEmail({
+      to: 'test@example.com',
+      subject: 'Test',
+      body: 'This is a test email.',
+    })).resolves.not.toThrow();
+
+    expect(mockProvider1.sendEmail).toHaveBeenCalled();
+    expect(mockProvider2.sendEmail).toHaveBeenCalled();
+  });
+
+  it('should not send duplicate emails', async () => {
+    jest.spyOn(mockProvider1, 'sendEmail').mockResolvedValue();
+    jest.spyOn(mockProvider2, 'sendEmail').mockResolvedValue();
+
+    await emailService.sendEmail({
+      to: 'test@example.com',
+      subject: 'Test',
+      body: 'This is a test email.',
+    });
+
+    expect(mockProvider1.sendEmail).toHaveBeenCalledTimes(1);
+    expect(mockProvider2.sendEmail).toHaveBeenCalledTimes(1);
+  });
+});
+
+Errors and debugging :
+
+When try to run typescript getting some errors after installing packages once delete it can be sorted
+
+Output :
+Out of 9 emails 4 getting passed others failed due to same scenarios in the passed emails 
+
+ 
+
+
